@@ -39,15 +39,12 @@ public class IpcameraService {
 
     /* 海康威視API */
     // artemis网关服务器ip端口
-//    private static String ARTTEMISCONFIG_HOST = "10.142.81.21:443";
     @Value("${hikvision.arttemisconfig.host}")
     private String ARTTEMISCONFIG_HOST;
     // 秘钥appkey
-//    private static String ARTTEMISCONFIG_APPKEY = "25398502";
     @Value("${hikvision.arttemisconfig.appkey}")
     private String ARTTEMISCONFIG_APPKEY;
     // 秘钥appSecret
-//    private static String ARTTEMISCONFIG_APPSECRET = "xLU6R5mEblVD2d3Ej47w";
     @Value("${hikvision.arttemisconfig.appsecret}")
     private String ARTTEMISCONFIG_APPSECRET;
 
@@ -88,14 +85,6 @@ public class IpcameraService {
         ipcameraCodeResultModel.setCodeStatus(codeStauts);
         return ipcameraCodeResultModel;
     }
-
-//    public String GetCameraPlaybackURLByName(String cameraName, String beginTime, String endTime){
-//        try{
-//
-//        }catch(Exception e){
-//
-//        }
-//    }
 
     public String GetCameraPlaybackURL(String cameraIndexCode, String beginTime, String endTime) {
         String url = null;

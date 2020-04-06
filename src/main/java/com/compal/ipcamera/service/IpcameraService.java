@@ -5,7 +5,6 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.compal.ipcamera.model.IpcameraReplayResultModel;
 import com.compal.ipcamera.model.IpcameraCodeResultModel;
-import com.compal.ipcamera.model.ResponseModel;
 import com.hikvision.artemis.sdk.ArtemisHttpUtil;
 import com.hikvision.artemis.sdk.config.ArtemisConfig;
 import org.joda.time.DateTime;
@@ -19,15 +18,12 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import com.compal.ipcamera.repository.CameraListRepository;
 import com.compal.ipcamera.entity.CameraList;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 import javax.transaction.Transactional;
-//import static org.apache.logging.log4j.core.util.NameUtil.md5;
 
 @Service
 @Transactional
@@ -61,28 +57,36 @@ public class IpcameraService {
             // fetch an individual customer by ID
             CameraList cameraList = cameraListRepository.findByCameraName(cameraName);
             indexCode  = cameraList.getCameraIndexCode();
+            String replayUrl = GetCameraPlaybackURL(indexCode, beginTime, endTime);
+            ipcameraReplayResultModel.setReplayUrl(replayUrl);
         }catch(Exception e){
             logger.error(e.getMessage());
+            ipcameraReplayResultModel.setMessage(e.getMessage());
         }
-
-        String replayUrl = GetCameraPlaybackURL(indexCode, beginTime, endTime);
-        ipcameraReplayResultModel.setReplayUrl(replayUrl);
         return ipcameraReplayResultModel;
     }
 
     public IpcameraReplayResultModel generateCameraPlaybackURLByCode(String cameraIndexCode, String beginTime, String endTime) {
         IpcameraReplayResultModel ipcameraReplayResultModel = new IpcameraReplayResultModel();
-
-        String replayUrl = GetCameraPlaybackURL(cameraIndexCode, beginTime, endTime);
-        ipcameraReplayResultModel.setReplayUrl(replayUrl);
+        try{
+            String replayUrl = GetCameraPlaybackURL(cameraIndexCode, beginTime, endTime);
+            ipcameraReplayResultModel.setReplayUrl(replayUrl);
+        }catch(Exception e){
+            logger.error(e.getMessage());
+            ipcameraReplayResultModel.setMessage(e.getMessage());
+        }
         return ipcameraReplayResultModel;
     }
 
     public IpcameraCodeResultModel generateCameraCode() {
         IpcameraCodeResultModel ipcameraCodeResultModel = new IpcameraCodeResultModel();
-
-        String codeStauts = GetCameraCode();
-        ipcameraCodeResultModel.setCodeStatus(codeStauts);
+        try{
+            String codeStauts = GetCameraCode();
+            ipcameraCodeResultModel.setCodeStatus(codeStauts);
+        }catch(Exception e){
+            logger.error(e.getMessage());
+            ipcameraCodeResultModel.setMessage(e.getMessage());
+        }
         return ipcameraCodeResultModel;
     }
 
@@ -112,20 +116,12 @@ public class IpcameraService {
         String body = jsonBody.toJSONString();
        //调用接口
         logger.info(body);
-        try{
-            String result = ArtemisHttpUtil.doPostStringArtemis(path, body, null, null, contentType , null);// post请求application/json类型参数
-            url = JSON.parseObject(result).getJSONObject("data").getString("url");
-//            logger.info("cameraIndexCode:" + cameraIndexCode + ", beginTime:" + beginTime + ", endTime:" + endTime);
-//            logger.error(JSON.parseObject(result).toJSONString());
-
-        }catch (Exception e){
-            logger.error(e.getMessage());
-        }
+        String result = ArtemisHttpUtil.doPostStringArtemis(path, body, null, null, contentType , null);// post请求application/json类型参数
+        url = JSON.parseObject(result).getJSONObject("data").getString("url");
         return url;
     }
 
     public String GetCameraCode() {
-        String result = null;
         //设置平台参数，根据实际情况,设置host appkey appsecret 三个参数.
         ArtemisConfig.host = ARTTEMISCONFIG_HOST;
         ArtemisConfig.appKey = ARTTEMISCONFIG_APPKEY;
@@ -145,11 +141,7 @@ public class IpcameraService {
         String body = jsonBody.toJSONString();
         //调用接口
         logger.info(body);
-        try{
-            result = ArtemisHttpUtil.doPostStringArtemis(path, body, null, null, contentType , null);// post请求application/json类型参数
-        }catch (Exception e){
-            logger.error(e.getMessage());
-        }
+        String result = ArtemisHttpUtil.doPostStringArtemis(path, body, null, null, contentType , null);// post请求application/json类型参数
         JSONArray JSONArray = JSON.parseObject(result).getJSONObject("data").getJSONArray("list");
 
         for(int i = 0; i<JSONArray.size(); i++){

@@ -10,8 +10,8 @@ import java.sql.Timestamp;
 public class CameraList {
 //    @GeneratedValue(strategy=GenerationType.AUTO)
     @Id
-    private String cameraName;
     private String cameraIndexCode;
+    private String cameraName;
     private Timestamp createTime;
     private Timestamp updateTime;
 

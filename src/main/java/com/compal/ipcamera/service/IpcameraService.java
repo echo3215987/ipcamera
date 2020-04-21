@@ -50,15 +50,28 @@ public class IpcameraService {
     static final String contentType = "application/json";
     static final DateTimeFormatter isoFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
-    public IpcameraReplayResultModel generateCameraPlaybackURLByName(String cameraName, String beginTime, String endTime) {
+    public IpcameraReplayResultModel generateCameraPlaybackURLByName(String cameraName, String beginTime, String endTime, String expand) {
         IpcameraReplayResultModel ipcameraReplayResultModel = new IpcameraReplayResultModel();
         String indexCode = null;
         try{
             // fetch an individual customer by ID
             CameraList cameraList = cameraListRepository.findByCameraName(cameraName);
+            if (cameraList == null){
+                ipcameraReplayResultModel.setMessage("camera name was not found");
+                return ipcameraReplayResultModel;
+            }
             indexCode  = cameraList.getCameraIndexCode();
-            String replayUrl = GetCameraPlaybackURL(indexCode, beginTime, endTime);
+            String[] replayResponse = GetCameraPlaybackURL(indexCode, beginTime, endTime, expand);
+            String replayUrl = replayResponse[0];
+            String beginTimeRes = replayResponse[1];
+            String endTimeRes = replayResponse[2];
+            String size = replayResponse[3];
+            String message = replayResponse[4];
             ipcameraReplayResultModel.setReplayUrl(replayUrl);
+            ipcameraReplayResultModel.setBeginTime(beginTimeRes);
+            ipcameraReplayResultModel.setEndTime(endTimeRes);
+            ipcameraReplayResultModel.setSize(size);
+            ipcameraReplayResultModel.setMessage(message);
         }catch(Exception e){
             logger.error(e.getMessage());
             ipcameraReplayResultModel.setMessage(e.getMessage());
@@ -66,11 +79,43 @@ public class IpcameraService {
         return ipcameraReplayResultModel;
     }
 
-    public IpcameraReplayResultModel generateCameraPlaybackURLByCode(String cameraIndexCode, String beginTime, String endTime) {
+    public IpcameraReplayResultModel generateCameraPlaybackURLByCode(String cameraIndexCode, String beginTime, String endTime, String expand) {
         IpcameraReplayResultModel ipcameraReplayResultModel = new IpcameraReplayResultModel();
         try{
-            String replayUrl = GetCameraPlaybackURL(cameraIndexCode, beginTime, endTime);
+            String[] replayResponse = GetCameraPlaybackURL(cameraIndexCode, beginTime, endTime, expand);
+            String replayUrl = replayResponse[0];
+            String beginTimeRes = replayResponse[1];
+            String endTimeRes = replayResponse[2];
+            String size = replayResponse[3];
+            String message = replayResponse[4];
             ipcameraReplayResultModel.setReplayUrl(replayUrl);
+            ipcameraReplayResultModel.setBeginTime(beginTimeRes);
+            ipcameraReplayResultModel.setEndTime(endTimeRes);
+            ipcameraReplayResultModel.setSize(size);
+            ipcameraReplayResultModel.setMessage(message);
+        }catch(Exception e){
+            logger.error(e.getMessage());
+            ipcameraReplayResultModel.setMessage(e.getMessage());
+        }
+        return ipcameraReplayResultModel;
+    }
+
+    public IpcameraReplayResultModel generateCameraPreviewURLByName(String cameraName, String expand) {
+        IpcameraReplayResultModel ipcameraReplayResultModel = new IpcameraReplayResultModel();
+        String indexCode = null;
+        try{
+            // fetch an individual customer by ID
+            CameraList cameraList = cameraListRepository.findByCameraName(cameraName);
+            if (cameraList == null){
+                ipcameraReplayResultModel.setMessage("camera name was not found");
+                return ipcameraReplayResultModel;
+            }
+            indexCode  = cameraList.getCameraIndexCode();
+            String[] replayResponse = GetCameraPreviewURL(indexCode, expand);
+            String replayUrl = replayResponse[0];
+            String message = replayResponse[1];
+            ipcameraReplayResultModel.setReplayUrl(replayUrl);
+            ipcameraReplayResultModel.setMessage(message);
         }catch(Exception e){
             logger.error(e.getMessage());
             ipcameraReplayResultModel.setMessage(e.getMessage());
@@ -81,8 +126,8 @@ public class IpcameraService {
     public IpcameraCodeResultModel generateCameraCode() {
         IpcameraCodeResultModel ipcameraCodeResultModel = new IpcameraCodeResultModel();
         try{
-            String codeStauts = GetCameraCode();
-            ipcameraCodeResultModel.setCodeStatus(codeStauts);
+            String message = GetCameraCode();
+            ipcameraCodeResultModel.setMessage(message);
         }catch(Exception e){
             logger.error(e.getMessage());
             ipcameraCodeResultModel.setMessage(e.getMessage());
@@ -90,8 +135,12 @@ public class IpcameraService {
         return ipcameraCodeResultModel;
     }
 
-    public String GetCameraPlaybackURL(String cameraIndexCode, String beginTime, String endTime) {
+    public String[] GetCameraPlaybackURL(String cameraIndexCode, String beginTime, String endTime, String expand) {
         String url = null;
+        String beginTimeRes = null;
+        String endTimeRes = null;
+        String size = null;
+
         //设置平台参数，根据实际情况,设置host appkey appsecret 三个参数.
         ArtemisConfig.host = ARTTEMISCONFIG_HOST;
         ArtemisConfig.appKey = ARTTEMISCONFIG_APPKEY;
@@ -110,15 +159,29 @@ public class IpcameraService {
         jsonBody.put("streamType", 0);
         jsonBody.put("protocol", "rtsp");
         jsonBody.put("transmode", 1);
-        jsonBody.put("expand", "streamform=rtp");
+//        jsonBody.put("expand", "streamform=rtp");
         jsonBody.put("beginTime", beginTime);
         jsonBody.put("endTime", endTime);
+        if(expand != null)
+            jsonBody.put("expand", expand);
         String body = jsonBody.toJSONString();
        //调用接口
         logger.info(body);
         String result = ArtemisHttpUtil.doPostStringArtemis(path, body, null, null, contentType , null);// post请求application/json类型参数
-        url = JSON.parseObject(result).getJSONObject("data").getString("url");
-        return url;
+        JSONObject resultObject = JSON.parseObject(result);
+        String message = resultObject.getString("msg");
+        JSONObject data = resultObject.getJSONObject("data");
+        if(data != null){
+            url = data.getString("url");
+            JSONArray jsonArray = data.getJSONArray("list");
+            for(int i = 0; i<jsonArray.size(); i++) {
+                JSONObject replayObj = jsonArray.getJSONObject(i);
+                beginTimeRes = replayObj.getString("beginTime");
+                endTimeRes = replayObj.getString("endTime");
+                size = replayObj.getString("size");
+            }
+        }
+        return new String[]{url, beginTimeRes, endTimeRes, size, message};
     }
 
     public String GetCameraCode() {
@@ -142,10 +205,14 @@ public class IpcameraService {
         //调用接口
         logger.info(body);
         String result = ArtemisHttpUtil.doPostStringArtemis(path, body, null, null, contentType , null);// post请求application/json类型参数
-        JSONArray JSONArray = JSON.parseObject(result).getJSONObject("data").getJSONArray("list");
-
-        for(int i = 0; i<JSONArray.size(); i++){
-            JSONObject cameraObj = JSONArray.getJSONObject(i);
+        JSONObject resultObject = JSON.parseObject(result);
+        String message = resultObject.getString("msg");
+        JSONObject data = resultObject.getJSONObject("data");
+        JSONArray jsonArray = new JSONArray();
+        if(data != null)
+            jsonArray = data.getJSONArray("list");
+        for(int i = 0; i<jsonArray.size(); i++){
+            JSONObject cameraObj = jsonArray.getJSONObject(i);
             String cameraIndexCode = cameraObj.getString("cameraIndexCode");
             String cameraName = cameraObj.getString("cameraName");
             String createTime = cameraObj.getString("createTime");
@@ -162,9 +229,46 @@ public class IpcameraService {
 //                CameraList cameraList = new CameraList("7ccadbece9f64ae0950943ae886fac83", "N01-3F 02L F68-12 78.58 R11.12", new Timestamp(createdt.getMillis()), new Timestamp(updatedt.getMillis()));
             CameraList cameraList = new CameraList(cameraIndexCode, cameraName, new Timestamp(createdt.getMillis()), new Timestamp(updatedt.getMillis()));
             cameraList = cameraListRepository.save(cameraList);
-//            System.out.println("Inserted records into the table...");
         }
-        return "success";
+        return message;
+    }
+
+    public String[] GetCameraPreviewURL(String cameraIndexCode, String expand) {
+
+        String url = null;
+
+        //设置平台参数，根据实际情况,设置host appkey appsecret 三个参数.
+        ArtemisConfig.host = ARTTEMISCONFIG_HOST;
+        ArtemisConfig.appKey = ARTTEMISCONFIG_APPKEY;
+        ArtemisConfig.appSecret = ARTTEMISCONFIG_APPSECRET;
+
+        final String previewURLsApi = ARTEMIS_PATH + "/api/video/v1/cameras/previewURLs";
+        Map<String, String> path = new HashMap<String, String>(2) {
+            {
+                put("https://", previewURLsApi);//根据现场环境部署确认是http还是https
+            }
+        };
+        System.out.println(previewURLsApi);
+
+        logger.info(previewURLsApi);
+        //组装请求参数
+        JSONObject jsonBody = new JSONObject();
+        jsonBody.put("cameraIndexCode", cameraIndexCode);
+        jsonBody.put("streamType", 0);
+        jsonBody.put("protocol", "rtsp");
+        jsonBody.put("transmode", 1);
+        if(expand != null)
+            jsonBody.put("expand", expand);
+        String body = jsonBody.toJSONString();
+        //调用接口
+        logger.info(body);
+        String result = ArtemisHttpUtil.doPostStringArtemis(path, body, null, null, contentType , null);// post请求application/json类型参数
+        JSONObject resultObject = JSON.parseObject(result);
+        String message = resultObject.getString("msg");
+        JSONObject data = resultObject.getJSONObject("data");
+        if(data != null)
+            url = data.getString("url");
+        return new String[]{url, message};
     }
 }
 

@@ -52,7 +52,14 @@ public class HikvisionController {
                 return new ResponseEntity<ResponseModel>(responseModel, statusCode);
             }
 
-            ipcameraReplayResultModel = ipcameraService.generateCameraPlaybackURLByName(requestIpcameraReplayModel.getCameraName(), requestIpcameraReplayModel.getBeginTime(), requestIpcameraReplayModel.getEndTime());
+            if (requestIpcameraReplayModel.getExpand() == null && requestIpcameraReplayModel.getExpand().equals("")) {
+                statusCode = HttpStatus.NO_CONTENT;
+                responseModel.setCode(IpcameraReplayErrorCode.EXPAND_IS_EMPTY.getCode());
+                responseModel.setMessage(IpcameraReplayErrorCode.EXPAND_IS_EMPTY.getDescription());
+                return new ResponseEntity<ResponseModel>(responseModel, statusCode);
+            }
+
+            ipcameraReplayResultModel = ipcameraService.generateCameraPlaybackURLByName(requestIpcameraReplayModel.getCameraName(), requestIpcameraReplayModel.getBeginTime(), requestIpcameraReplayModel.getEndTime(), requestIpcameraReplayModel.getExpand());
             responseModel.setResult(ipcameraReplayResultModel);
             responseModel.setCode(IpcameraReplayErrorCode.SUCCESS.getCode());
             logger.info("Success: replayUrl: " + ipcameraReplayResultModel.getReplayUrl() );
@@ -93,7 +100,49 @@ public class HikvisionController {
                 responseModel.setMessage(IpcameraReplayErrorCode.END_TIME_IS_EMPTY.getDescription());
                 return new ResponseEntity<ResponseModel>(responseModel, statusCode);
             }
-            ipcameraReplayResultModel = ipcameraService.generateCameraPlaybackURLByCode(requestIpcameraReplayModel.getCameraIndexCode(), requestIpcameraReplayModel.getBeginTime(), requestIpcameraReplayModel.getEndTime());
+
+            if (requestIpcameraReplayModel.getExpand() == null && requestIpcameraReplayModel.getExpand().equals("")) {
+                statusCode = HttpStatus.NO_CONTENT;
+                responseModel.setCode(IpcameraReplayErrorCode.EXPAND_IS_EMPTY.getCode());
+                responseModel.setMessage(IpcameraReplayErrorCode.EXPAND_IS_EMPTY.getDescription());
+                return new ResponseEntity<ResponseModel>(responseModel, statusCode);
+            }
+
+            ipcameraReplayResultModel = ipcameraService.generateCameraPlaybackURLByCode(requestIpcameraReplayModel.getCameraIndexCode(), requestIpcameraReplayModel.getBeginTime(), requestIpcameraReplayModel.getEndTime(), requestIpcameraReplayModel.getExpand());
+            responseModel.setResult(ipcameraReplayResultModel);
+            responseModel.setCode(IpcameraReplayErrorCode.SUCCESS.getCode());
+            logger.info("Success: replayUrl: " + ipcameraReplayResultModel.getReplayUrl() );
+
+        } catch (Exception e) {
+            statusCode = HttpStatus.BAD_REQUEST;
+            responseModel.setMessage(e.getMessage());
+            responseModel.setCode(IpcameraReplayErrorCode.EXCEPTION_ERROR.getCode());
+            logger.error("Error: replayUrl: " + ipcameraReplayResultModel.getReplayUrl());
+        }
+        return new ResponseEntity<ResponseModel>(responseModel, statusCode);
+    }
+
+    @RequestMapping(value = "/ipcamera/previewurl/name", method = RequestMethod.POST)
+    public ResponseEntity<ResponseModel> getIpcameraPreviewURLByName(@RequestBody @Validated RequestIpcameraReplayModel requestIpcameraReplayModel) {
+        ResponseModel responseModel = new ResponseModel();
+        IpcameraReplayResultModel ipcameraReplayResultModel = new IpcameraReplayResultModel();
+        HttpStatus statusCode = HttpStatus.OK;
+        try {
+            if (requestIpcameraReplayModel.getCameraName() == null && requestIpcameraReplayModel.getCameraName().equals("")) {
+                statusCode = HttpStatus.NO_CONTENT;
+                responseModel.setCode(IpcameraReplayErrorCode.CAMERA_NAME_IS_EMPTY.getCode());
+                responseModel.setMessage(IpcameraReplayErrorCode.CAMERA_NAME_IS_EMPTY.getDescription());
+                return new ResponseEntity<ResponseModel>(responseModel, statusCode);
+            }
+
+            if (requestIpcameraReplayModel.getExpand() == null && requestIpcameraReplayModel.getExpand().equals("")) {
+                statusCode = HttpStatus.NO_CONTENT;
+                responseModel.setCode(IpcameraReplayErrorCode.EXPAND_IS_EMPTY.getCode());
+                responseModel.setMessage(IpcameraReplayErrorCode.EXPAND_IS_EMPTY.getDescription());
+                return new ResponseEntity<ResponseModel>(responseModel, statusCode);
+            }
+
+            ipcameraReplayResultModel = ipcameraService.generateCameraPreviewURLByName(requestIpcameraReplayModel.getCameraName(), requestIpcameraReplayModel.getExpand());
             responseModel.setResult(ipcameraReplayResultModel);
             responseModel.setCode(IpcameraReplayErrorCode.SUCCESS.getCode());
             logger.info("Success: replayUrl: " + ipcameraReplayResultModel.getReplayUrl() );
@@ -117,13 +166,13 @@ public class HikvisionController {
             ipcameraCodeResultModel = ipcameraService.generateCameraCode();
             responseModel.setResult(ipcameraCodeResultModel);
             responseModel.setCode(IpcameraCodeErrorCode.SUCCESS.getCode());
-            logger.info("Success: codeStatus: " + ipcameraCodeResultModel.getCodeStatus() );
+            logger.info("Success: message: " + ipcameraCodeResultModel.getMessage() );
 
         } catch (Exception e) {
             statusCode = HttpStatus.BAD_REQUEST;
             responseModel.setMessage(e.getMessage());
             responseModel.setCode(IpcameraCodeErrorCode.EXCEPTION_ERROR.getCode());
-            logger.error("Error: codeStatus: " + ipcameraCodeResultModel.getCodeStatus());
+            logger.error("Error: message: " + ipcameraCodeResultModel.getMessage());
         }
         return new ResponseEntity<ResponseModel>(responseModel, statusCode);
     }

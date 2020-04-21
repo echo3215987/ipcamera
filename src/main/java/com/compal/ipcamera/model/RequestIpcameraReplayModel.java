@@ -8,6 +8,7 @@ public class RequestIpcameraReplayModel {
     private String beginTime;
     private String endTime;
     private String cameraIndexCode;
+    private String expand;
 
     public String getCameraName() {
         return cameraName;
@@ -39,5 +40,13 @@ public class RequestIpcameraReplayModel {
 
     public void setCameraIndexCode(String cameraIndexCode) {
         this.cameraIndexCode = cameraIndexCode;
+    }
+
+    public String getExpand() {
+        return expand;
+    }
+
+    public void setExpand(String expand) {
+        this.expand = expand;
     }
 }

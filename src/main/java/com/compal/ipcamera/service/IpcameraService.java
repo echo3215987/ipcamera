@@ -270,6 +270,7 @@ public class IpcameraService {
             url = data.getString("url");
         return new String[]{url, message};
     }
+
 }
 
 
